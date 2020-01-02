@@ -103,6 +103,7 @@ class Sudoku(object):
 
     def _simplify(self):
         counter = self._remove_duplicates()
+        counter += self._solve_singles()
         return counter
 
     def _remove_duplicates(self):
@@ -113,9 +114,52 @@ class Sudoku(object):
             value = self.board[location].value()
             for area in CHUNK_MAP[location]:
                 for neighbour in area:
-                    if value in self.board[neighbour] and neighbour != location:
+                    if neighbour == location:
+                        # We skip the solved cell
+                        continue
+                    if value in self.board[neighbour]:
                         self.board[neighbour].remove(value)
                         counter += 1
+
+        return counter
+
+    def _solve_singles(self):
+        counter = 0
+        for area in CHUNKS:
+            # We are going to see if any of the cells have a candidate
+            # that is only present in that location and nowhere else.
+
+            # We keep track of the number of times a candidate has appeared
+            candidate_counts = {}
+            for candidate in CANDIDATES_RANGE:
+                candidate_counts[candidate] = 0
+
+            for location in area:
+                for candidate in self.board[location].candidates:
+                    candidate_counts[candidate] += 1
+
+            # We see if any candidate appears only once in the area
+            target = None
+            for candidate, count in candidate_counts.items():
+                if count == 1:
+                    target = candidate
+                    break
+
+            if target is None:
+                # There is no candidate that appears only once in the area
+                # We can proceed to search the next area/chunk.
+                continue
+
+            # Since the target candidate appears in only one cell,
+            # we can go ahead and directly change it
+            for location in area:
+                cell = self.board[location]
+                if cell.is_solved():
+                    continue
+
+                if target in cell:
+                    cell.set(target)
+                    counter += 1
 
         return counter
 
