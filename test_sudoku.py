@@ -82,3 +82,34 @@ class TestSudoku(TestCase):
                          "Solutions do not match.")
         print("Hard case:\n")
         sudoku.print_stats()
+
+    def test_hard2(self):
+        input_string = """   6 . . | . 7 . | . . 9 
+                             . 1 . | . . . | . 2 . 
+                             . . 5 | . . . | 4 . . 
+                            -------+-------+-------
+                             . . . | 1 . 2 | . . . 
+                             9 . . | . 8 . | . . 6 
+                             . . . | 6 . 9 | . . . 
+                            -------+-------+-------
+                             . . 1 | . . . | 2 . . 
+                             . 3 . | . . . | . 4 . 
+                             7 . . | . 5 . | . . 8 """
+        sudoku = Sudoku(input_string)
+        sudoku.solve()
+        self.assertTrue(sudoku.is_solved())
+        self.assertEqual(" 6 4 8 | 2 7 3 | 1 5 9 \n"
+                         " 3 1 9 | 5 6 4 | 8 2 7 \n"
+                         " 2 7 5 | 9 1 8 | 4 6 3 \n"
+                         "-------+-------+-------\n"
+                         " 8 6 7 | 1 3 2 | 5 9 4 \n"
+                         " 9 2 4 | 7 8 5 | 3 1 6 \n"
+                         " 1 5 3 | 6 4 9 | 7 8 2 \n"
+                         "-------+-------+-------\n"
+                         " 4 8 1 | 3 9 6 | 2 7 5 \n"
+                         " 5 3 6 | 8 2 7 | 9 4 1 \n"
+                         " 7 9 2 | 4 5 1 | 6 3 8 ",
+                         str(sudoku),
+                         "Solutions do not match.")
+        print("Hard case 2:\n")
+        sudoku.print_stats()
