@@ -72,12 +72,8 @@ class Cell(object):
             self.candidates.remove(item)
 
     def set(self, value):
-        """:returns True if the value has been successfully set.
-        False otherwise."""
-        if value not in self.candidates:
-            return False
+        """Marks the cell as solved and assigns it the given value."""
         self.candidates = [value]
-        return True
 
     def reset(self, old_candidates):
         self.candidates = old_candidates
@@ -96,7 +92,7 @@ class Board(object):
             yield cell
 
     def get_cell_at(self, index):
-        return self.cells[index] if 0 <= index < 81 else None
+        return self.cells[index]
 
 
 class Sudoku(object):
@@ -124,10 +120,11 @@ class Sudoku(object):
             [cell.is_solved() for cell in self.board]
         ) and self.is_valid()
 
-    def is_valid(self):
+    def is_valid(self, location=None):
         """A board is valid if all the areas have all the possible values at
          most once and the no cell is invalid."""
-        for area in CHUNKS:
+        areas = CHUNKS if location is None else CHUNK_MAP[location]
+        for area in areas:
             # We keep track of the unique values we find
             found = []
             for index in area:
@@ -246,9 +243,6 @@ class Sudoku(object):
         return self._backtrack_and_solve()
 
     def _backtrack_and_solve(self):
-        if not self.is_valid():
-            return False
-
         location = self._next_empty_slot()
         if location is None:
             return self.is_valid()
@@ -258,7 +252,8 @@ class Sudoku(object):
 
         for candidate in candidates:
             cell.set(candidate)
-            if self._backtrack_and_solve():
+            if self.is_valid(location) and \
+                    self._backtrack_and_solve():
                 return True
             cell.reset(candidates)
             self.backtracks += 1
