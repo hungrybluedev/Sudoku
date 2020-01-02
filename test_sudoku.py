@@ -49,6 +49,8 @@ class TestSudoku(TestCase):
                          " 6 4 5 | 7 9 1 | 3 2 8 ",
                          str(sudoku),
                          "Solutions do not match.")
+        print("Easy case:\n")
+        sudoku.print_stats()
 
     def test_hard(self):
         input_string = """   . . . | . . . | . . . 
@@ -78,3 +80,5 @@ class TestSudoku(TestCase):
                          " 3 4 9 | 2 5 8 | 6 7 1 ",
                          str(sudoku),
                          "Solutions do not match.")
+        print("Hard case:\n")
+        sudoku.print_stats()
