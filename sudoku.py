@@ -40,27 +40,40 @@ class Cell(object):
         """Initialize the cell with the given value.
 
         If no value is provided, all possible values are set as candidates.
-
-
         """
         self.candidates = list(CANDIDATES_RANGE) if value is None else [value]
 
     def is_solved(self):
+        """A cell is marked as solved if it has only one candidate."""
         return len(self.candidates) == 1
 
     def is_invalid(self):
+        """A cell is invalid if any of the simplification operations caused
+        the cell to loose all candidates."""
         return len(self.candidates) == 0
 
     def value(self):
-        return self.candidates[0]
+        """
+        :returns  a non-null value only when it is solved. Otherwise None.
+        """
+        return self.candidates[0] if self.is_solved() else None
 
     def __contains__(self, item):
+        """
+        :returns True if the given candidate is a valid option for this Cell.
+        """
         return item in self.candidates
 
     def remove(self, item):
-        self.candidates.remove(item)
+        """Removes the given candidate from the Cell's list of candidates
+        if present.
+        """
+        if item in self:
+            self.candidates.remove(item)
 
     def set(self, value):
+        """:returns True if the value has been successfully set.
+        False otherwise."""
         if value not in self.candidates:
             return False
         self.candidates = [value]
@@ -82,19 +95,30 @@ class Sudoku(object):
             for char in input_string
         ]
 
+        # Stat tracking parameters
+        self.duplicates_removed = []
+        self.singles_solved = []
+        self.last_cells_solved = []
+        self.backtracks = 0
+
     def is_solved(self):
+        """A board is solved when there are no unsolved cells and the board is
+        valid."""
         return all([cell.is_solved() for cell in self.board]) \
                and self.is_valid()
 
     def is_valid(self):
+        """A board is valid if all the areas have all the possible values at
+         most once and the no cell is invalid."""
         for area in CHUNKS:
+            # We keep track of the unique values we find
             found = []
             for index in area:
-                location = self.board[index]
-                if location.is_invalid():
+                cell = self.board[index]
+                if cell.is_invalid():
                     return False
-                if location.is_solved():
-                    value = location.value()
+                if cell.is_solved():
+                    value = cell.value()
                     if value in found:
                         return False
                     else:
@@ -102,9 +126,15 @@ class Sudoku(object):
         return True
 
     def _simplify(self):
-        counter = self._remove_duplicates()
-        counter += self._solve_singles()
-        return counter
+        counts = {"remove duplicates": self._remove_duplicates(),
+                  "solve singles": self._solve_singles(),
+                  "solve last cell": self._solve_last_cell()}
+
+        self.duplicates_removed.append(counts["remove duplicates"])
+        self.singles_solved.append(counts["solve singles"])
+        self.last_cells_solved.append(counts["solve last cell"])
+
+        return sum(counts.values())
 
     def _remove_duplicates(self):
         counter = 0
@@ -117,8 +147,9 @@ class Sudoku(object):
                     if neighbour == location:
                         # We skip the solved cell
                         continue
-                    if value in self.board[neighbour]:
-                        self.board[neighbour].remove(value)
+                    cell = self.board[neighbour]
+                    if value in cell:
+                        cell.remove(value)
                         counter += 1
 
         return counter
@@ -163,6 +194,29 @@ class Sudoku(object):
 
         return counter
 
+    def _solve_last_cell(self):
+        counter = 0
+        for area in CHUNKS:
+            # We need to see if any area has just one unsolved cell
+            solved_count, unsolved = 0, None
+            candidates = list(CANDIDATES_RANGE)
+            for location in area:
+                cell = self.board[location]
+                if cell.is_solved():
+                    solved_count += 1
+                    candidates.remove(cell.value())
+                else:
+                    unsolved = cell
+
+            # We can continue only when all but one have been solved.
+            if solved_count != 8:
+                continue
+
+            unsolved.set(candidates[0])
+            counter += 1
+
+        return counter
+
     def _next_empty_slot(self):
         for location in RANGE81:
             if not self.board[location].is_solved():
@@ -172,9 +226,9 @@ class Sudoku(object):
     def solve(self):
         while self._simplify() > 0:
             pass
-        return self._recursive_solve()
+        return self._backtrack_and_solve()
 
-    def _recursive_solve(self):
+    def _backtrack_and_solve(self):
         if not self.is_valid():
             return False
 
@@ -186,10 +240,17 @@ class Sudoku(object):
 
         for candidate in candidates:
             self.board[location].candidates = [candidate]
-            if self._recursive_solve():
+            if self._backtrack_and_solve():
                 return True
         self.board[location].candidates = candidates
+        self.backtracks += 1
         return False
+
+    def print_stats(self):
+        print("Duplicates removed   :", self.duplicates_removed)
+        print("Singles solved       :", self.singles_solved)
+        print("Last cells solved    :", self.last_cells_solved)
+        print("Backtracks performed :", self.backtracks)
 
     def __str__(self, pretty_print=True):
         if not self.is_valid():
