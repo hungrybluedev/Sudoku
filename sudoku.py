@@ -79,6 +79,25 @@ class Cell(object):
         self.candidates = [value]
         return True
 
+    def reset(self, old_candidates):
+        self.candidates = old_candidates
+
+
+class Board(object):
+
+    def __init__(self, clean_string):
+        self.cells = [
+            Cell() if not char.isdigit() else Cell(int(char))
+            for char in clean_string
+        ]
+
+    def __iter__(self):
+        for cell in self.cells:
+            yield cell
+
+    def get_cell_at(self, index):
+        return self.cells[index] if 0 <= index < 81 else None
+
 
 class Sudoku(object):
     def __init__(self, input_string=""):
@@ -90,10 +109,7 @@ class Sudoku(object):
         if len(input_string) != 81:
             raise AttributeError("Input must have length 81")
 
-        self.board = [
-            Cell() if not char.isdigit() else Cell(int(char))
-            for char in input_string
-        ]
+        self.board = Board(input_string)
 
         # Stat tracking parameters
         self.duplicates_removed = []
@@ -104,8 +120,9 @@ class Sudoku(object):
     def is_solved(self):
         """A board is solved when there are no unsolved cells and the board is
         valid."""
-        return all([cell.is_solved() for cell in self.board]) \
-               and self.is_valid()
+        return all(
+            [cell.is_solved() for cell in self.board]
+        ) and self.is_valid()
 
     def is_valid(self):
         """A board is valid if all the areas have all the possible values at
@@ -114,7 +131,7 @@ class Sudoku(object):
             # We keep track of the unique values we find
             found = []
             for index in area:
-                cell = self.board[index]
+                cell = self.board.get_cell_at(index)
                 if cell.is_invalid():
                     return False
                 if cell.is_solved():
@@ -139,15 +156,15 @@ class Sudoku(object):
     def _remove_duplicates(self):
         counter = 0
         for location in RANGE81:
-            if not self.board[location].is_solved():
+            if not self.board.get_cell_at(location).is_solved():
                 continue
-            value = self.board[location].value()
+            value = self.board.get_cell_at(location).value()
             for area in CHUNK_MAP[location]:
-                for neighbour in area:
-                    if neighbour == location:
+                for neighbour_index in area:
+                    if neighbour_index == location:
                         # We skip the solved cell
                         continue
-                    cell = self.board[neighbour]
+                    cell = self.board.get_cell_at(neighbour_index)
                     if value in cell:
                         cell.remove(value)
                         counter += 1
@@ -166,7 +183,7 @@ class Sudoku(object):
                 candidate_counts[candidate] = 0
 
             for location in area:
-                for candidate in self.board[location].candidates:
+                for candidate in self.board.get_cell_at(location).candidates:
                     candidate_counts[candidate] += 1
 
             # We see if any candidate appears only once in the area
@@ -184,7 +201,7 @@ class Sudoku(object):
             # Since the target candidate appears in only one cell,
             # we can go ahead and directly change it
             for location in area:
-                cell = self.board[location]
+                cell = self.board.get_cell_at(location)
                 if cell.is_solved():
                     continue
 
@@ -201,7 +218,7 @@ class Sudoku(object):
             solved_count, unsolved = 0, None
             candidates = list(CANDIDATES_RANGE)
             for location in area:
-                cell = self.board[location]
+                cell = self.board.get_cell_at(location)
                 if cell.is_solved():
                     solved_count += 1
                     candidates.remove(cell.value())
@@ -219,7 +236,7 @@ class Sudoku(object):
 
     def _next_empty_slot(self):
         for location in RANGE81:
-            if not self.board[location].is_solved():
+            if not self.board.get_cell_at(location).is_solved():
                 return location
         return None
 
@@ -236,14 +253,16 @@ class Sudoku(object):
         if location is None:
             return self.is_valid()
 
-        candidates = self.board[location].candidates
+        cell = self.board.get_cell_at(location)
+        candidates = cell.candidates
 
         for candidate in candidates:
-            self.board[location].candidates = [candidate]
+            cell.set(candidate)
             if self._backtrack_and_solve():
                 return True
-        self.board[location].candidates = candidates
-        self.backtracks += 1
+            cell.reset(candidates)
+            self.backtracks += 1
+
         return False
 
     def print_stats(self):
@@ -263,10 +282,10 @@ class Sudoku(object):
                 for j in RANGE9:
                     if j % 3 == 0 and j != 0:
                         line += "| "
-                    if not self.board[location].is_solved():
+                    if not self.board.get_cell_at(location).is_solved():
                         value = "."
                     else:
-                        value = str(self.board[location].value())
+                        value = str(self.board.get_cell_at(location).value())
                     line += value + " "
                     location += 1
 
