@@ -232,10 +232,15 @@ class Sudoku(object):
         return counter
 
     def _next_empty_slot(self):
+        least_choices, required_location = None, None
         for location in RANGE81:
-            if not self.board.get_cell_at(location).is_solved():
-                return location
-        return None
+            cell = self.board.get_cell_at(location)
+            if not cell.is_solved():
+                if least_choices is None or \
+                        len(least_choices.candidates) > len(cell.candidates):
+                    least_choices = cell
+                    required_location = location
+        return required_location
 
     def solve(self):
         while self._simplify() > 0:
